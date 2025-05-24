@@ -1,11 +1,11 @@
 [package]
-name = "rust_readability"
+name = "coherity"
 version = "0.1.1"
 edition = "2021"
-authors = ["Ian Goodale"]
+authors = ["Ian Goodale", "J/A"]
 description = "A package to assess the complexity of texts using a variety of readability formulas."
 readme = "README.md"
-repository = "https://github.com/ian-nai/rust_readability"
+repository = "https://github.com/archer884/coherity"
 license = "GPL-3.0-or-later"
 keywords = ["NLP", "readability"]
 categories = ["text-processing"]
@@ -13,8 +13,8 @@ categories = ["text-processing"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-csv = "1.1"
+csv = "1.3"
 wordsworth = "0.1.*"
-punkt = "1.0.5"
-unicode-segmentation = "1.9.0"
+punkt = { git = "https://github.com/archer884/rust-punkt", version = "1.0.5" }
+unicode-segmentation = "1.12.0"
 regex = "1"
