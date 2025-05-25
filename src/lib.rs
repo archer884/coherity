@@ -35,36 +35,9 @@ pub fn get_syllable_counts(s: &[String]) -> Vec<i32> {
         .collect()
 }
 
-pub fn get_average_syllable_count(sylcount_list: Vec<i32>) -> f64 {
-    let mut sum = 0;
-    for w in &sylcount_list {
-        sum += w;
-    }
-    sum as f64 / sylcount_list.len() as f64
-}
-
-// num of words with 2 syllables or less;
-pub fn short_syl_count(word_list: Vec<String>) -> i32 {
-    let sylcount_list = get_syllable_counts(&word_list);
-    let mut short_syls = 0;
-    for syl in sylcount_list {
-        if syl <= 2 {
-            short_syls += 1;
-        }
-    }
-    short_syls
-}
-
-// num of words with 3 syls or more;
-pub fn long_syl_count(word_list: Vec<String>) -> i32 {
-    let sylcount_list = get_syllable_counts(&word_list);
-    let mut long_syls = 0;
-    for syl in sylcount_list {
-        if syl >= 3 {
-            long_syls += 1;
-        }
-    }
-    long_syls
+pub fn get_average_syllable_count(s: &[i32]) -> f64 {
+    let sum: i32 = s.iter().sum();
+    sum as f64 / s.len() as f64
 }
 
 pub fn wordcount_list(word_list: Vec<String>) -> i32 {
@@ -85,25 +58,9 @@ pub fn split_into_sentences(doc: &str) -> Vec<String> {
 }
 
 pub fn get_sentence_lengths(doc: &str) -> Vec<usize> {
-    let trainer: Trainer<Standard> = Trainer::new();
-    let mut data = TrainingData::new();
-
-    trainer.train(doc, &mut data);
-
-    let mut sent_word_list: Vec<String> = Vec::new();
-    let mut sent_wordcount_list: Vec<usize> = Vec::new();
-
-    for s in SentenceTokenizer::<Standard>::new(doc, &data) {
-        sent_word_list.push(s.to_string());
-    }
-    for s in sent_word_list {
-        let mut temp_vec: Vec<String> = Vec::new();
-        for word in s.split_whitespace() {
-            temp_vec.push(word.to_string());
-        }
-        sent_wordcount_list.push(temp_vec.len());
-    }
-    sent_wordcount_list
+    let data = TrainingData::english();
+    let sentences = SentenceTokenizer::<Standard>::new(doc, &data);
+    sentences.map(|sentence| sentence.split_whitespace().count()).collect()
 }
 
 pub fn sentence_average_word_count(s: &[usize]) -> f64 {
@@ -128,7 +85,7 @@ fn fk_values(string_to_analyze: &str) -> (f64, f64) {
     // avg syls per word
     let words = get_all_words(string_to_analyze);
     let word_syllables = get_syllable_counts(&words);
-    let average_word_syllables = get_average_syllable_count(word_syllables);
+    let average_word_syllables = get_average_syllable_count(&word_syllables);
 
     (average_sentence_length, average_word_syllables)
 }
@@ -264,6 +221,24 @@ mod tests {
             .collect();
         let expected = [1, 1, 3, 1, 2, 1, 3, 1, 1, 2];
         let actual = super::get_syllable_counts(&text);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn get_average_syllable_count() {
+        let expected = 6.142857142857143;
+        let actual = super::get_average_syllable_count(&[3, 4, 5, 6, 7, 8, 10]);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn get_sentence_lengths() {
+        let text = "I just thought it was strange. I've asked to be assigned to \
+            your security detail--I just wanted you to know that. This coat was tailor-made for \
+            me by my tailor, Chadwick, in Beverly Hills. Check it out: it's $17.50 a couple.";
+
+        let expected = &[6, 15, 13, 7];
+        let actual = super::get_sentence_lengths(text);
         assert_eq!(actual, expected);
     }
 
