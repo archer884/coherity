@@ -1,7 +1,40 @@
 use itertools::Itertools;
-use punkt::{params::Standard, SentenceTokenizer, Trainer, TrainingData};
+use punkt::{params::Standard, SentenceTokenizer, TrainingData};
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
+
+struct Characterization<'a> {
+    sentences: Vec<&'a str>,
+    sentence_lengths: Vec<usize>,
+    words: Vec<&'a str>,
+    word_syllable_lengths: Vec<usize>,
+}
+
+#[derive(Debug)]
+pub struct Characterizer {
+    training: TrainingData,
+}
+
+impl Characterizer {
+    pub fn new() -> Self {
+        Self {
+            training: TrainingData::english(),
+        }
+    }
+
+    pub fn characterize(&self, document: &str) -> Characterization {
+        Characterization {
+            sentences: todo!(),
+            sentence_lengths: todo!(),
+            words: todo!(),
+            word_syllable_lengths: todo!(),
+        }
+    }
+
+    fn sentences<'a>(&self, doc: &'a str) -> Vec<&'a str> {
+        SentenceTokenizer::<Standard>::new(doc, &self.training).collect()
+    }
+}
 
 fn get_all_words(s: &str) -> Vec<String> {
     s.unicode_words().map(|s| s.to_owned()).collect()
@@ -44,23 +77,20 @@ pub fn wordcount_list(word_list: Vec<String>) -> i32 {
     word_list.len() as i32
 }
 
+// FIXME Cache the training data for this nonsense.
 pub fn split_into_sentences(doc: &str) -> Vec<String> {
-    let trainer: Trainer<Standard> = Trainer::new();
-    let mut data = TrainingData::new();
-
-    trainer.train(doc, &mut data);
-    let mut sent_list: Vec<String> = Vec::new();
-
-    for s in SentenceTokenizer::<Standard>::new(doc, &data) {
-        sent_list.push(s.to_string());
-    }
-    sent_list
+    let data = TrainingData::english();
+    let sentences = SentenceTokenizer::<Standard>::new(doc, &data);
+    sentences.map(|s| s.into()).collect()
 }
 
+// FIXME Cache the training data for this nonsense.
 pub fn get_sentence_lengths(doc: &str) -> Vec<usize> {
     let data = TrainingData::english();
     let sentences = SentenceTokenizer::<Standard>::new(doc, &data);
-    sentences.map(|sentence| sentence.split_whitespace().count()).collect()
+    sentences
+        .map(|sentence| sentence.split_whitespace().count())
+        .collect()
 }
 
 pub fn sentence_average_word_count(s: &[usize]) -> f64 {
