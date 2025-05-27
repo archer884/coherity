@@ -3,11 +3,32 @@ use punkt::{params::Standard, SentenceTokenizer, TrainingData};
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 
-struct Characterization<'a> {
+pub struct Characterization<'a> {
     sentences: Vec<&'a str>,
     sentence_lengths: Vec<usize>,
     words: Vec<&'a str>,
-    word_syllable_lengths: Vec<usize>,
+    word_syllable_lengths: Vec<u8>,
+}
+
+impl Characterization<'_> {
+    pub fn fk_grade_level(&self) -> f64 {
+        let average_sentence_length = self.sentence_lengths.iter().
+        (0.39 * average_sentence_length) + (11.8 * average_word_syllables) - 15.59
+    }
+
+    pub fn reading_ease(&self) -> f64 {
+        todo!()
+        206.835 - (1.015 * average_sentence_length) - (84.6 * average_word_syllables)
+    }
+}
+
+pub fn flesch_reading_ease(string_to_analyze: &str) -> f64 {
+    let (average_sentence_length, average_word_syllables) = fk_values(string_to_analyze);
+}
+
+pub fn flesch_kincaid_grade_level(string_to_analyze: &str) -> f64 {
+    let (average_sentence_length, average_word_syllables) = fk_values(string_to_analyze);
+    
 }
 
 #[derive(Debug)]
@@ -22,12 +43,18 @@ impl Characterizer {
         }
     }
 
-    pub fn characterize(&self, document: &str) -> Characterization {
+    pub fn characterize<'a>(&self, document: &'a str) -> Characterization<'a> {
+        let sentences = self.sentences(document);
+        let words: Vec<_> = document.unicode_words().collect();
+
         Characterization {
-            sentences: todo!(),
-            sentence_lengths: todo!(),
-            words: todo!(),
-            word_syllable_lengths: todo!(),
+            sentence_lengths: sentences
+                .iter()
+                .map(|&s| s.split_whitespace().count())
+                .collect(),
+            sentences,
+            word_syllable_lengths: words.iter().map(|&word| get_syllable_count(word)).collect(),
+            words,
         }
     }
 
@@ -96,16 +123,6 @@ pub fn get_sentence_lengths(doc: &str) -> Vec<usize> {
 pub fn sentence_average_word_count(s: &[usize]) -> f64 {
     let sum: usize = s.iter().sum();
     sum as f64 / s.len() as f64
-}
-
-pub fn flesch_reading_ease(string_to_analyze: &str) -> f64 {
-    let (average_sentence_length, average_word_syllables) = fk_values(string_to_analyze);
-    206.835 - (1.015 * average_sentence_length) - (84.6 * average_word_syllables)
-}
-
-pub fn flesch_kincaid_grade_level(string_to_analyze: &str) -> f64 {
-    let (average_sentence_length, average_word_syllables) = fk_values(string_to_analyze);
-    (0.39 * average_sentence_length) + (11.8 * average_word_syllables) - 15.59
 }
 
 fn fk_values(string_to_analyze: &str) -> (f64, f64) {
@@ -179,7 +196,7 @@ pub fn automated_readability_index(string_to_analyze: &str) -> f64 {
 }
 
 // FIXME Avoid allocation of normalized string.
-fn get_syllable_count(word: &str) -> u32 {
+fn get_syllable_count(word: &str) -> u8 {
     // Single syllables in words like bread and lead, but split in names like Breanne and Adreann
     // TODO: handle names, where we only use "ia" (again, original author's todo)
     static SPECIALS: &[(u8, u8)] = &[(b'i', b'a'), (b'e', b'a')];
