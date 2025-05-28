@@ -1,86 +1,14 @@
+mod characterize;
+
 use itertools::Itertools;
-use punkt::{params::Standard, SentenceTokenizer, TrainingData};
-use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 
-pub struct Characterization<'a> {
-    sentences: Vec<&'a str>,
-    sentence_lengths: Vec<usize>,
-    words: Vec<&'a str>,
-    word_syllable_lengths: Vec<u8>,
-}
+pub use characterize::{Characterization, Characterizer};
 
-impl Characterization<'_> {
-    pub fn fk_grade_level(&self) -> f64 {
-        let average_sentence_length = self.sentence_lengths.iter().
-        (0.39 * average_sentence_length) + (11.8 * average_word_syllables) - 15.59
-    }
-
-    pub fn reading_ease(&self) -> f64 {
-        todo!()
-        206.835 - (1.015 * average_sentence_length) - (84.6 * average_word_syllables)
-    }
-}
-
-pub fn flesch_reading_ease(string_to_analyze: &str) -> f64 {
-    let (average_sentence_length, average_word_syllables) = fk_values(string_to_analyze);
-}
-
-pub fn flesch_kincaid_grade_level(string_to_analyze: &str) -> f64 {
-    let (average_sentence_length, average_word_syllables) = fk_values(string_to_analyze);
-    
-}
-
-#[derive(Debug)]
-pub struct Characterizer {
-    training: TrainingData,
-}
-
-impl Characterizer {
-    pub fn new() -> Self {
-        Self {
-            training: TrainingData::english(),
-        }
-    }
-
-    pub fn characterize<'a>(&self, document: &'a str) -> Characterization<'a> {
-        let sentences = self.sentences(document);
-        let words: Vec<_> = document.unicode_words().collect();
-
-        Characterization {
-            sentence_lengths: sentences
-                .iter()
-                .map(|&s| s.split_whitespace().count())
-                .collect(),
-            sentences,
-            word_syllable_lengths: words.iter().map(|&word| get_syllable_count(word)).collect(),
-            words,
-        }
-    }
-
-    fn sentences<'a>(&self, doc: &'a str) -> Vec<&'a str> {
-        SentenceTokenizer::<Standard>::new(doc, &self.training).collect()
-    }
-}
-
-fn get_all_words(s: &str) -> Vec<String> {
-    s.unicode_words().map(|s| s.to_owned()).collect()
-}
-
-pub fn long_words(word_list: &[String]) -> f64 {
-    word_list.iter().filter(|&s| s.len() >= 6).count() as f64
-}
-
-pub fn percent_long_words(word_list: Vec<String>) -> f64 {
-    let list_count = word_list.len() as i32;
-    let long_words_count = long_words(&word_list);
-    long_words_count / list_count as f64
-}
-
-pub fn character_count(string_to_analyze: &str) -> f64 {
-    let re = Regex::new(r"[^\w]").unwrap();
-    let result = re.replace_all(string_to_analyze, "");
-    result.graphemes(true).count() as f64
+fn characters(s: &str) -> usize {
+    s.graphemes(true)
+        .filter(|&s| s.chars().all(|u| u.is_alphabetic()))
+        .count()
 }
 
 pub fn linsear_scoring(s: &[i32]) -> f64 {
@@ -104,55 +32,9 @@ pub fn wordcount_list(word_list: Vec<String>) -> i32 {
     word_list.len() as i32
 }
 
-// FIXME Cache the training data for this nonsense.
-pub fn split_into_sentences(doc: &str) -> Vec<String> {
-    let data = TrainingData::english();
-    let sentences = SentenceTokenizer::<Standard>::new(doc, &data);
-    sentences.map(|s| s.into()).collect()
-}
-
-// FIXME Cache the training data for this nonsense.
-pub fn get_sentence_lengths(doc: &str) -> Vec<usize> {
-    let data = TrainingData::english();
-    let sentences = SentenceTokenizer::<Standard>::new(doc, &data);
-    sentences
-        .map(|sentence| sentence.split_whitespace().count())
-        .collect()
-}
-
 pub fn sentence_average_word_count(s: &[usize]) -> f64 {
     let sum: usize = s.iter().sum();
     sum as f64 / s.len() as f64
-}
-
-fn fk_values(string_to_analyze: &str) -> (f64, f64) {
-    let sentence_lengths = get_sentence_lengths(string_to_analyze);
-    let average_sentence_length = sentence_average_word_count(&sentence_lengths);
-
-    // avg syls per word
-    let words = get_all_words(string_to_analyze);
-    let word_syllables = get_syllable_counts(&words);
-    let average_word_syllables = get_average_syllable_count(&word_syllables);
-
-    (average_sentence_length, average_word_syllables)
-}
-
-pub fn lix(string_to_analyze: &str) -> f64 {
-    //total_words
-    let all_words = get_all_words(string_to_analyze);
-    //num long words
-    let num_long_words = percent_long_words(all_words);
-    //avg_num_words/sentence
-    let sent_wordcount_list = get_sentence_lengths(string_to_analyze);
-    let avg_words_per_sentence = sentence_average_word_count(&sent_wordcount_list);
-    num_long_words + avg_words_per_sentence
-}
-
-pub fn rix(string_to_analyze: &str) -> f64 {
-    let all_words = get_all_words(string_to_analyze);
-    let long_words_count = long_words(&all_words);
-    let sentence_count = split_into_sentences(string_to_analyze).len() as f64;
-    long_words_count / sentence_count
 }
 
 pub fn linsear_write(string_to_analyze: &str) -> f64 {
@@ -193,6 +75,41 @@ pub fn automated_readability_index(string_to_analyze: &str) -> f64 {
     let sent_count = split_into_sentences(string_to_analyze).len() as f64;
 
     (4.71 * (chars / all_words)) + (0.5 * (all_words / sent_count)) - 21.43
+}
+
+trait Average {
+    type Output;
+    fn average(self) -> Self::Output;
+}
+
+impl Average for &[f64] {
+    type Output = f64;
+
+    #[inline]
+    fn average(self) -> Self::Output {
+        let sum: f64 = self.iter().sum();
+        sum / self.len() as f64
+    }
+}
+
+impl Average for &[usize] {
+    type Output = f64;
+
+    #[inline]
+    fn average(self) -> Self::Output {
+        let sum: usize = self.iter().sum();
+        sum as f64 / self.len() as f64
+    }
+}
+
+impl Average for &[u8] {
+    type Output = f64;
+
+    #[inline]
+    fn average(self) -> Self::Output {
+        let sum: u8 = self.iter().sum();
+        sum as f64 / self.len() as f64
+    }
 }
 
 // FIXME Avoid allocation of normalized string.
@@ -244,6 +161,8 @@ fn get_syllable_count(word: &str) -> u8 {
 mod tests {
     use unicode_segmentation::UnicodeSegmentation;
 
+    use crate::Characterizer;
+
     #[test]
     fn sentence_average_word_count() {
         let input = vec![5, 7, 4, 12];
@@ -284,8 +203,9 @@ mod tests {
             your security detail--I just wanted you to know that. This coat was tailor-made for \
             me by my tailor, Chadwick, in Beverly Hills. Check it out: it's $17.50 a couple.";
 
-        let expected = &[6, 15, 13, 7];
-        let actual = super::get_sentence_lengths(text);
+        let characterizer = Characterizer::new();
+        let expected = &[6, 16, 14, 7];
+        let actual = characterizer.characterize(text).sentence_lengths;
         assert_eq!(actual, expected);
     }
 
