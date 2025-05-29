@@ -43,7 +43,7 @@ impl Average for &[u8] {
 
     #[inline]
     fn average(self) -> Self::Output {
-        let sum: u8 = self.iter().sum();
+        let sum: u32 = self.iter().map(|&u| u32::from(u)).sum();
         sum as f64 / self.len() as f64
     }
 }
