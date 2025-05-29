@@ -1,4 +1,4 @@
-use punkt::{params::Standard, SentenceTokenizer, TrainingData};
+use punktoo::{params::Standard, SentenceTokenizer, TrainingData};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{get_syllable_count, Average};
@@ -40,6 +40,12 @@ impl Characterizer {
     }
 }
 
+impl Default for Characterizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Characterization<'a> {
     pub sentences: Vec<&'a str>,
     pub sentence_lengths: Vec<usize>,
@@ -58,34 +64,11 @@ impl Characterization<'_> {
         206.835 - (1.015 * average_sentence_length) - (84.6 * average_word_syllables)
     }
 
-    pub fn lix(&self) -> f64 {
-        self.long_words_percent() + self.sentence_lengths.average()
-    }
-
-    pub fn rix(&self) -> f64 {
-        self.long_words() as f64 / self.sentences.len() as f64
-    }
-
     #[inline]
     fn fk_values(&self) -> (f64, f64) {
         (
             self.sentence_lengths.average(),
             self.word_syllable_lengths.average(),
         )
-    }
-
-    #[inline]
-    fn long_words(&self) -> usize {
-        const LONG_WORD_THRESHOLD: usize = 6;
-        self.words
-            .iter()
-            .map(|&s| s.graphemes(true).count())
-            .filter(|&len| len >= LONG_WORD_THRESHOLD)
-            .count()
-    }
-
-    #[inline]
-    fn long_words_percent(&self) -> f64 {
-        self.long_words() as f64 / self.words.len() as f64
     }
 }

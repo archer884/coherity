@@ -1,32 +1,8 @@
 mod characterize;
 
 use itertools::Itertools;
-use unicode_segmentation::UnicodeSegmentation;
 
 pub use characterize::{Characterization, Characterizer};
-
-fn characters(s: &str) -> usize {
-    s.graphemes(true)
-        .filter(|&s| s.chars().all(|u| u.is_alphabetic()))
-        .count()
-}
-
-pub fn linsear_scoring(s: &[i32]) -> f64 {
-    s.iter()
-        .map(|&len| if len < 3 { 1.0f64 } else { 3.0 })
-        .sum()
-}
-
-pub fn get_syllable_counts(s: &[String]) -> Vec<i32> {
-    s.iter()
-        .map(|word| get_syllable_count(word) as i32)
-        .collect()
-}
-
-pub fn get_average_syllable_count(s: &[i32]) -> f64 {
-    let sum: i32 = s.iter().sum();
-    sum as f64 / s.len() as f64
-}
 
 pub fn wordcount_list(word_list: Vec<String>) -> i32 {
     word_list.len() as i32
@@ -35,46 +11,6 @@ pub fn wordcount_list(word_list: Vec<String>) -> i32 {
 pub fn sentence_average_word_count(s: &[usize]) -> f64 {
     let sum: usize = s.iter().sum();
     sum as f64 / s.len() as f64
-}
-
-pub fn linsear_write(string_to_analyze: &str) -> f64 {
-    //compiling variables for linsear_write
-    let all_words = get_all_words(string_to_analyze);
-    let all_syls = get_syllable_counts(&all_words);
-    let summed_score = linsear_scoring(&all_syls);
-    let sent_count = split_into_sentences(string_to_analyze).len() as f64;
-
-    // compute the score
-    let provisional_result = summed_score / sent_count;
-
-    // provisional adjustment
-    if provisional_result < 20.0 {
-        (provisional_result / 2.0) - 1.0
-    } else {
-        provisional_result / 2.0
-    }
-}
-
-pub fn coleman_liau(string_to_analyze: &str) -> f64 {
-    //total_words
-    let all_words = get_all_words(string_to_analyze).len() as f64;
-    // characters
-    let chars = character_count(string_to_analyze);
-    // sents
-    let sent_count = split_into_sentences(string_to_analyze).len() as f64;
-
-    0.0588 * ((chars / all_words) * 100.0) - 0.296 * ((sent_count / chars) * 100.0) - 15.8
-}
-
-pub fn automated_readability_index(string_to_analyze: &str) -> f64 {
-    //total_words
-    let all_words = get_all_words(string_to_analyze).len() as f64;
-    // characters
-    let chars = character_count(string_to_analyze);
-    // sents
-    let sent_count = split_into_sentences(string_to_analyze).len() as f64;
-
-    (4.71 * (chars / all_words)) + (0.5 * (all_words / sent_count)) - 21.43
 }
 
 trait Average {
@@ -159,8 +95,6 @@ fn get_syllable_count(word: &str) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use unicode_segmentation::UnicodeSegmentation;
-
     use crate::Characterizer;
 
     #[test]
@@ -168,32 +102,6 @@ mod tests {
         let input = vec![5, 7, 4, 12];
         let expected = 7.0;
         let actual = super::sentence_average_word_count(&input);
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn linsear_scoring() {
-        let input = vec![4, 3, 2, 1, 7, 1, 2, 4];
-        let expected = 16.0;
-        let actual = super::linsear_scoring(&input);
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn get_syllable_counts() {
-        let text: Vec<_> = "In the beginning, God created the heaven and the earth."
-            .unicode_words()
-            .map(|s| s.into())
-            .collect();
-        let expected = [1, 1, 3, 1, 2, 1, 3, 1, 1, 2];
-        let actual = super::get_syllable_counts(&text);
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn get_average_syllable_count() {
-        let expected = 6.142857142857143;
-        let actual = super::get_average_syllable_count(&[3, 4, 5, 6, 7, 8, 10]);
         assert_eq!(actual, expected);
     }
 
